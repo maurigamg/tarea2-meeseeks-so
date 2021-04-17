@@ -112,10 +112,10 @@ char *execute_query(char *query, char query_type)
 			a += 1;
 			*glob_var = a;
 			sem_getvalue(bin_sem, &valor);
-			printf("Mr.Meeseeks's child: pid:%d, ppid:%d!, glob_var:%d, valor: %d\n", getpid(), getppid(), *glob_var, valor);
+			printf("Mr.Meeseeks's child: pid:%d, ppid:%d, glob_var:%d, valor: %d\n", getpid(), getppid(), *glob_var, valor);
 			sem_post(bin_sem);
 			sem_getvalue(bin_sem, &valor);
-			printf("Mr.Meeseeks's child: pid:%d, ppid:%d!, glob_var:%d, valor: %d\n", getpid(), getppid(), *glob_var, valor);
+			printf("Mr.Meeseeks's child: pid:%d, ppid:%d, glob_var:%d, valor: %d\n", getpid(), getppid(), *glob_var, valor);
 			//int status = system(query);
 			//kill(getpid(), SIGKILL);
 			exit(EXIT_SUCCESS);
@@ -127,7 +127,7 @@ char *execute_query(char *query, char query_type)
 			//wait(NULL);
 			wait(NULL);
 			sleep(1);
-			printf("Proceso Padre: pid:%d, ppid:%d!, glob_var:%d \n", getpid(), getppid(), *glob_var);
+			printf("Proceso Padre: pid:%d, ppid:%d, glob_var:%d \n", getpid(), getppid(), *glob_var);
 			printf("Hijo completado\n");
 			sem_destroy(bin_sem);
 			munmap(bin_sem, sizeof(bin_sem));
@@ -145,8 +145,8 @@ char *execute_query(char *query, char query_type)
 int main(int argc, char **argv)
 {
 	char *query;
-	char continue_exec = 'S';
-	char query_type = 'S';
+	char continue_exec;
+	char query_type;
 
 	while (1)
 	{

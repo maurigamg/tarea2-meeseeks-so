@@ -3,185 +3,215 @@
 // separated by space.
 // Function to find precedence of
 // operators.
-#include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <signal.h>
+#include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
-struct stack
+//char stack
+char stack[25];
+int top = -1;
+
+int ipow(int base, int exp)
 {
-    int data;
-    struct stack *ptr; //pointer type of stack
-};
+    int result = 1;
+    for (;;)
+    {
+        if (exp & 1)
+            result *= base;
+        exp >>= 1;
+        if (!exp)
+            break;
+        base *= base;
+    }
 
-typedef struct stack Stack;
-typedef Stack *stackPtr;
-
-//function prototypes of different functions
-void push(stackPtr *top, int x);   //for pushing value in stack
-int pop(stackPtr *top);            //for popping value out of stack
-int checkEmpty(stackPtr top);      //checking whether stack is empty
-void printValue(stackPtr showPtr); //for printing value that are pushed and popped
-
-int precedence(char op)
-{
-    if (op == '+' || op == '-')
-        return 1;
-    if (op == '*' || op == '/')
-        return 2;
-    return 0;
+    return result;
 }
 
-// Function to perform arithmetic operations.
-int applyOp(int a, int b, char op)
+void push(char item)
 {
-    switch (op)
+    stack[++top] = item;
+}
+
+char pop()
+{
+    return stack[top--];
+}
+
+//returns precedence of operators
+int precedence(char symbol)
+{
+
+    switch (symbol)
     {
     case '+':
-        return a + b;
     case '-':
-        return a - b;
+        return 2;
+        break;
     case '*':
-        return a * b;
     case '/':
-        return a / b;
+        return 3;
+        break;
+    case '^':
+        return 4;
+        break;
+    case '(':
+    case ')':
+    case '#':
+        return 1;
+        break;
     }
 }
 
-// Function that returns value of
-// expression after evaluation.
-int evaluate(char *tokens)
+//check whether the symbol is operator?
+int isOperator(char symbol)
 {
-    int i;
 
-    // stack to store integer values.
-    stack values;
-
-    // stack to store operators.
-    stack ops;
-
-    for (i = 0; i < strlen(tokens); i++)
+    switch (symbol)
     {
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+    case '^':
+    case '(':
+    case ')':
+        return 1;
+        break;
+    default:
+        return 0;
+    }
+}
 
-        // Current token is a whitespace,
-        // skip it.
-        if (tokens[i] == ' ')
-            continue;
+//converts infix expression to postfix
+void convert(char infix[], char postfix[])
+{
+    int i, symbol, j = 0;
+    stack[++top] = '#';
 
-        // Current token is an opening
-        // brace, push it to 'ops'
-        else if (tokens[i] == '(')
+    for (i = 0; i < strlen(infix); i++)
+    {
+        symbol = infix[i];
+
+        if (isOperator(symbol) == 0)
         {
-            ops.push(tokens[i]);
+            postfix[j] = symbol;
+            j++;
         }
-
-        // Current token is a number, push
-        // it to stack for numbers.
-        else if (isdigit(tokens[i]))
-        {
-            int val = 0;
-
-            // There may be more than one
-            // digits in number.
-            while (i < strlen(tokens) &&
-                   isdigit(tokens[i]))
-            {
-                val = (val * 10) + (tokens[i] - '0');
-                i++;
-            }
-
-            values.push(val);
-
-            // right now the i points to
-            // the character next to the digit,
-            // since the for loop also increases
-            // the i, we would skip one
-            //  token position; we need to
-            // decrease the value of i by 1 to
-            // correct the offset.
-            i--;
-        }
-
-        // Closing brace encountered, solve
-        // entire brace.
-        else if (tokens[i] == ')')
-        {
-            while (!ops.empty() && ops.top() != '(')
-            {
-                int val2 = values.top();
-                values.pop();
-
-                int val1 = values.top();
-                values.pop();
-
-                char op = ops.top();
-                ops.pop();
-
-                values.push(applyOp(val1, val2, op));
-            }
-
-            // pop opening brace.
-            if (!ops.empty())
-                ops.pop();
-        }
-
-        // Current token is an operator.
         else
         {
-            // While top of 'ops' has same or greater
-            // precedence to current token, which
-            // is an operator. Apply operator on top
-            // of 'ops' to top two elements in values stack.
-            while (!ops.empty() && precedence(ops.top()) >= precedence(tokens[i]))
+            if (symbol == '(')
             {
-                int val2 = values.top();
-                values.pop();
-
-                int val1 = values.top();
-                values.pop();
-
-                char op = ops.top();
-                ops.pop();
-
-                values.push(applyOp(val1, val2, op));
+                push(symbol);
             }
+            else
+            {
+                if (symbol == ')')
+                {
 
-            // Push current token to 'ops'.
-            ops.push(tokens[i]);
+                    while (stack[top] != '(')
+                    {
+                        postfix[j] = pop();
+                        j++;
+                    }
+
+                    pop(); //pop out (.
+                }
+                else
+                {
+                    if (precedence(symbol) > precedence(stack[top]))
+                    {
+                        push(symbol);
+                    }
+                    else
+                    {
+
+                        while (precedence(symbol) <= precedence(stack[top]))
+                        {
+                            postfix[j] = pop();
+                            j++;
+                        }
+
+                        push(symbol);
+                    }
+                }
+            }
         }
     }
 
-    // Entire expression has been parsed at this
-    // point, apply remaining ops to remaining
-    // values.
-    while (!ops.empty())
+    while (stack[top] != '#')
     {
-        int val2 = values.top();
-        values.pop();
-
-        int val1 = values.top();
-        values.pop();
-
-        char op = ops.top();
-        ops.pop();
-
-        values.push(applyOp(val1, val2, op));
+        postfix[j] = pop();
+        j++;
     }
 
-    // Top of 'values' contains result, return it.
-    return values.top();
+    postfix[j] = '\0'; //null terminate string.
 }
 
-int main()
+//int stack
+int stack_int[25];
+int top_int = -1;
+
+void push_int(int item)
 {
-    printf("%d", evaluate("10 + 2 * 6"));
-    printf("%d", evaluate("100 * 2 + 12"));
-    printf("%d", evaluate("100 * ( 2 + 12 )"));
-    printf("%d", evaluate("100 * ( 2 + 12 ) / 14"));
-    return 0;
+    stack_int[++top_int] = item;
 }
 
-// This code is contributed by Nikhil jindal.
+char pop_int()
+{
+    return stack_int[top_int--];
+}
+
+//evaluates postfix expression
+int evaluate(char *postfix)
+{
+
+    char ch;
+    int i = 0, operand1, operand2;
+
+    while ((ch = postfix[i++]) != '\0')
+    {
+
+        if (isdigit(ch))
+        {
+            push_int(ch - '0'); // Push the operand
+        }
+        else
+        {
+            //Operator,pop two  operands
+            operand2 = pop_int();
+            operand1 = pop_int();
+
+            switch (ch)
+            {
+            case '+':
+                push_int(operand1 + operand2);
+                break;
+            case '-':
+                push_int(operand1 - operand2);
+                break;
+            case '*':
+                push_int(operand1 * operand2);
+                break;
+            case '/':
+                push_int(operand1 / operand2);
+                break;
+            case '^':
+                push_int(ipow(operand1, operand2));
+                break;
+            }
+        }
+    }
+
+    return stack_int[top_int];
+}
+
+void main()
+{
+    char infix[25] = "2^(3-1)", postfix[25];
+    convert(infix, postfix);
+
+    printf("Infix expression is: %s\n", infix);
+    printf("Postfix expression is: %s\n", postfix);
+    printf("Evaluated expression is: %d\n", evaluate(postfix));
+}
