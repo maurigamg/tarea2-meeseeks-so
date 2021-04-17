@@ -30,10 +30,216 @@ https://stackoverflow.com/questions/21129845/why-does-sem-open-work-with-fork-wi
 #include <sys/wait.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <string.h>
+#include <ctype.h>
 
-static int *glob_var;
+//char stack
+char stack[25];
+int top = -1;
 
-sem_t *bin_sem;
+int ipow(int base, int exp)
+{
+	int result = 1;
+	for (;;)
+	{
+		if (exp & 1)
+			result *= base;
+		exp >>= 1;
+		if (!exp)
+			break;
+		base *= base;
+	}
+
+	return result;
+}
+
+void push(char item)
+{
+	stack[++top] = item;
+}
+
+char pop()
+{
+	return stack[top--];
+}
+
+//returns precedence of operators
+int precedence(char symbol)
+{
+
+	switch (symbol)
+	{
+	case '+':
+	case '-':
+		return 2;
+		break;
+	case '*':
+	case '/':
+		return 3;
+		break;
+	case '^':
+		return 4;
+		break;
+	case '(':
+	case ')':
+	case '#':
+		return 1;
+		break;
+	}
+}
+
+//check whether the symbol is operator?
+int isOperator(char symbol)
+{
+
+	switch (symbol)
+	{
+	case '+':
+	case '-':
+	case '*':
+	case '/':
+	case '^':
+	case '(':
+	case ')':
+		return 1;
+		break;
+	default:
+		return 0;
+	}
+}
+
+//converts infix expression to postfix
+void convert(char infix[], char postfix[])
+{
+	int i, symbol, j = 0;
+	stack[++top] = '#';
+
+	for (i = 0; i < strlen(infix); i++)
+	{
+		symbol = infix[i];
+
+		if (isOperator(symbol) == 0)
+		{
+			postfix[j] = symbol;
+			j++;
+		}
+		else
+		{
+			if (symbol == '(')
+			{
+				push(symbol);
+			}
+			else
+			{
+				if (symbol == ')')
+				{
+
+					while (stack[top] != '(')
+					{
+						postfix[j] = pop();
+						j++;
+					}
+
+					pop(); //pop out (.
+				}
+				else
+				{
+					if (precedence(symbol) > precedence(stack[top]))
+					{
+						push(symbol);
+					}
+					else
+					{
+
+						while (precedence(symbol) <= precedence(stack[top]))
+						{
+							postfix[j] = pop();
+							j++;
+						}
+
+						push(symbol);
+					}
+				}
+			}
+		}
+	}
+
+	while (stack[top] != '#')
+	{
+		postfix[j] = pop();
+		j++;
+	}
+
+	postfix[j] = '\0'; //null terminate string.
+}
+
+//int stack
+int stack_int[25];
+int top_int = -1;
+
+void push_int(int item)
+{
+	stack_int[++top_int] = item;
+}
+
+char pop_int()
+{
+	return stack_int[top_int--];
+}
+
+//evaluates postfix expression
+int evaluate(char *postfix)
+{
+
+	char ch;
+	int i = 0, operand1, operand2;
+
+	while ((ch = postfix[i++]) != '\0')
+	{
+
+		if (isdigit(ch))
+		{
+			push_int(ch - '0'); // Push the operand
+		}
+		else
+		{
+			//Operator,pop two  operands
+			operand2 = pop_int();
+			operand1 = pop_int();
+
+			switch (ch)
+			{
+			case '+':
+				push_int(operand1 + operand2);
+				break;
+			case '-':
+				push_int(operand1 - operand2);
+				break;
+			case '*':
+				push_int(operand1 * operand2);
+				break;
+			case '/':
+				push_int(operand1 / operand2);
+				break;
+			case '^':
+				push_int(ipow(operand1, operand2));
+				break;
+			}
+		}
+	}
+
+	return stack_int[top_int];
+}
+
+void demo_evaluate()
+{
+	char infix[25] = "2^(3-1)", postfix[25];
+	convert(infix, postfix);
+
+	printf("Infix expression is: %s\n", infix);
+	printf("Postfix expression is: %s\n", postfix);
+	printf("Evaluated expression is: %d\n", evaluate(postfix));
+}
 
 pid_t create_meeseeks()
 {
@@ -43,18 +249,24 @@ pid_t create_meeseeks()
 	return pid;
 }
 
-char *execute_query(char *query, char query_type)
+int execute_program_request()
+{
+}
+
+char *send_to_box(char *request, char request_type)
 {
 
-	int res;
+	static int *glob_var;
 
-	switch (query_type)
+	sem_t *bin_sem;
+
+	switch (request_type)
 	{
 	case 'T':;
 		return "Soy un texto";
 		break;
 	case 'A':;
-		return "Soy un algoritmo";
+		return "Soy un aritmetico";
 		break;
 	case 'L':;
 		return "Soy un logico";
@@ -112,11 +324,11 @@ char *execute_query(char *query, char query_type)
 			a += 1;
 			*glob_var = a;
 			sem_getvalue(bin_sem, &valor);
-			printf("Mr.Meeseeks's child: pid:%d, ppid:%d, glob_var:%d, valor: %d\n", getpid(), getppid(), *glob_var, valor);
+			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N(no hecho):%d, i:%d)\n", getpid(), getppid(), *glob_var, valor);
 			sem_post(bin_sem);
 			sem_getvalue(bin_sem, &valor);
-			printf("Mr.Meeseeks's child: pid:%d, ppid:%d, glob_var:%d, valor: %d\n", getpid(), getppid(), *glob_var, valor);
-			//int status = system(query);
+			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N(no hecho):%d, i:%d)\n", getpid(), getppid(), *glob_var, valor);
+			//int status = system(request);
 			//kill(getpid(), SIGKILL);
 			exit(EXIT_SUCCESS);
 		}
@@ -144,9 +356,10 @@ char *execute_query(char *query, char query_type)
 
 int main(int argc, char **argv)
 {
-	char *query;
+	char *request;
 	char continue_exec;
-	char query_type;
+	char request_type;
+	int tareas = 0;
 
 	while (1)
 	{
@@ -155,13 +368,14 @@ int main(int argc, char **argv)
 		printf("Operacion logica (L)\n");
 		printf("Ejecutar programa (P)\n");
 		printf("Indique el tipo de solicitud: ");
-		scanf("%c", &query_type);
+		scanf("%c", &request_type);
 		getchar();
 
 		printf("\nRealice la solicitud: ");
-		scanf("%[^\n]%*c", query); //geeksforgeeks.org/taking-string-input-space-c-3-different-methods/
+		scanf("%[^\n]%*c", request); //geeksforgeeks.org/taking-string-input-space-c-3-different-methods/
 
-		printf("\nReporte\n%s\n", execute_query(query, query_type));
+		printf("\nReporte\n%s\n", send_to_box(request, request_type));
+		tareas += 1;
 		printf("\nDesea realizar otra solicitud? (S/N): ");
 		scanf("%c", &continue_exec);
 		getchar();
