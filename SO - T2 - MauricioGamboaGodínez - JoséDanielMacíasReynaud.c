@@ -63,19 +63,16 @@ char *execute_query(char *query, char query_type)
 		glob_var = mmap(NULL, sizeof *glob_var, PROT_READ | PROT_WRITE,
 						MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-		bin_sem = mmap(NULL, sizeof(*bin_sem),
+		bin_sem = mmap(NULL, sizeof(bin_sem),
 					   PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS,
 					   -1, 0);
 
 		sem_init(bin_sem, 1, 1);
-		if (bin_sem == MAP_FAILED)
-		{
-			perror("mmap");
-			exit(EXIT_FAILURE);
-		}
+
 		*glob_var = 0;
+
 		pid_t meeseeks;
-		for (int i = 0; i < 100; i++)
+		for (int i = 0; i < 20; i++)
 		{
 
 			meeseeks = create_meeseeks();
@@ -96,18 +93,30 @@ char *execute_query(char *query, char query_type)
 		}
 		else if (meeseeks == 0)
 		{
-
+			int valor;
 			// proceso hijo
 			sem_wait(bin_sem);
-			*glob_var += 1;
+			int a = *glob_var;
+			a += 1;
+			a -= 1;
+			a += 1;
+			*glob_var = a;
+			a = *glob_var;
+			a -= 1;
+			a += 1;
+			a -= 1;
+			*glob_var = a;
+			a = *glob_var;
+			a += 1;
+			a -= 1;
+			a += 1;
+			*glob_var = a;
+			sem_getvalue(bin_sem, &valor);
+			printf("Mr.Meeseeks's child: pid:%d, ppid:%d!, glob_var:%d, valor: %d\n", getpid(), getppid(), *glob_var, valor);
 			sem_post(bin_sem);
-
-			printf("Mr.Meeseeks's child: pid:%d, ppid:%d!, glob_var:%d \n", getpid(), getppid(), *glob_var);
-			sem_destroy(bin_sem);
-			munmap(bin_sem, sizeof(bin_sem));
+			sem_getvalue(bin_sem, &valor);
+			printf("Mr.Meeseeks's child: pid:%d, ppid:%d!, glob_var:%d, valor: %d\n", getpid(), getppid(), *glob_var, valor);
 			//int status = system(query);
-			printf("I'm done!!\n");
-			munmap(glob_var, sizeof *glob_var);
 			//kill(getpid(), SIGKILL);
 			exit(EXIT_SUCCESS);
 		}
@@ -116,8 +125,12 @@ char *execute_query(char *query, char query_type)
 			// proceso padre
 
 			//wait(NULL);
+			wait(NULL);
+			sleep(1);
 			printf("Proceso Padre: pid:%d, ppid:%d!, glob_var:%d \n", getpid(), getppid(), *glob_var);
 			printf("Hijo completado\n");
+			sem_destroy(bin_sem);
+			munmap(bin_sem, sizeof(bin_sem));
 			munmap(glob_var, sizeof *glob_var);
 		}
 
@@ -135,8 +148,6 @@ int main(int argc, char **argv)
 	char continue_exec = 'S';
 	char query_type = 'S';
 
-	int a = atoi("2 + 2");
-	printf("%d", a);
 	while (1)
 	{
 		printf("\nConsulta textual (T)\n");
@@ -151,8 +162,6 @@ int main(int argc, char **argv)
 		scanf("%[^\n]%*c", query); //geeksforgeeks.org/taking-string-input-space-c-3-different-methods/
 
 		printf("\nReporte\n%s\n", execute_query(query, query_type));
-		wait(NULL);
-		sleep(1);
 		printf("\nDesea realizar otra solicitud? (S/N): ");
 		scanf("%c", &continue_exec);
 		getchar();
