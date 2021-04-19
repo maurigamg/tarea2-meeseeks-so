@@ -33,6 +33,11 @@ https://stackoverflow.com/questions/21129845/why-does-sem-open-work-with-fork-wi
 #include <string.h>
 #include <ctype.h>
 
+//Meesesks's variables
+static int *glob_var;
+sem_t *bin_sem;
+
+
 //char stack
 char stack[25];
 int top = -1;
@@ -256,10 +261,6 @@ int execute_program_request()
 char *send_to_box(char *request, char request_type)
 {
 
-	static int *glob_var;
-
-	sem_t *bin_sem;
-
 	switch (request_type)
 	{
 	case 'T':;
@@ -337,7 +338,7 @@ char *send_to_box(char *request, char request_type)
 			// proceso padre
 
 			//wait(NULL);
-			wait(NULL);
+			wait(NULL); //CAMBIAR POR WAITPID
 			sleep(1);
 			printf("Proceso Padre: pid:%d, ppid:%d, glob_var:%d \n", getpid(), getppid(), *glob_var);
 			printf("Hijo completado\n");
