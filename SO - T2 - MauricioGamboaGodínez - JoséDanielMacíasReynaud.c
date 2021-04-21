@@ -37,11 +37,11 @@ https://stackoverflow.com/questions/21129845/why-does-sem-open-work-with-fork-wi
 static int *glob_var;
 sem_t *bin_sem;
 
-
 //char stack
 char stack[25];
 int top = -1;
 
+//Start of arithmetic operator
 int ipow(int base, int exp)
 {
 	int result = 1;
@@ -246,6 +246,27 @@ void demo_evaluate()
 	printf("Evaluated expression is: %d\n", evaluate(postfix));
 }
 
+//End of arithmetic operator
+
+int decide_child_amount(float prob)
+{
+
+	int amount = 0;
+	if (prob >= 0.0 && prob <= 45.0)
+	{
+		amount = 3 + rand() % 5;
+	}
+	else if (prob <= 85.0)
+	{
+		amount = 1 + rand() % 3;
+	}
+	else if (prob <= 100.0)
+	{
+		amount = 1;
+	}
+	return amount;
+}
+
 pid_t create_meeseeks()
 {
 	pid_t pid;
@@ -258,7 +279,7 @@ int execute_program_request()
 {
 }
 
-char *send_to_box(char *request, char request_type)
+char *send_to_box(char *request, char request_type, float probability, int level)
 {
 
 	switch (request_type)
@@ -285,7 +306,8 @@ char *send_to_box(char *request, char request_type)
 		*glob_var = 0;
 
 		pid_t meeseeks;
-		for (int i = 0; i < 20; i++)
+		int children_to_create = decide_child_amount(probability);
+		for (int i = 0; i < children_to_create; i++)
 		{
 
 			meeseeks = create_meeseeks();
@@ -295,6 +317,7 @@ char *send_to_box(char *request, char request_type)
 			}
 			else if (meeseeks == 0)
 			{
+
 				break;
 			}
 		}
@@ -324,11 +347,15 @@ char *send_to_box(char *request, char request_type)
 			a -= 1;
 			a += 1;
 			*glob_var = a;
+			sleep(2);
 			sem_getvalue(bin_sem, &valor);
 			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N(no hecho):%d, i:%d)\n", getpid(), getppid(), *glob_var, valor);
 			sem_post(bin_sem);
 			sem_getvalue(bin_sem, &valor);
 			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N(no hecho):%d, i:%d)\n", getpid(), getppid(), *glob_var, valor);
+			//Lentamente crece la facilidad hasta llegar a 100, cuando llega a 100, ya no hay hijos
+
+			send_to_box(request, request_type, probability + 10, level + 1);
 			//int status = system(request);
 			//kill(getpid(), SIGKILL);
 			exit(EXIT_SUCCESS);
@@ -375,7 +402,14 @@ int main(int argc, char **argv)
 		printf("\nRealice la solicitud: ");
 		scanf("%[^\n]%*c", request); //geeksforgeeks.org/taking-string-input-space-c-3-different-methods/
 
-		printf("\nReporte\n%s\n", send_to_box(request, request_type));
+		printf("\nIngrese la dificultad (0.0 - 100.0): ");
+		float prob_input;
+		scanf("%f", &prob_input);
+
+		printf("%f es el numero", prob_input);
+
+		printf("\nReporte\n%s\n", send_to_box(request, request_type, prob_input, 1));
+
 		tareas += 1;
 		printf("\nDesea realizar otra solicitud? (S/N): ");
 		scanf("%c", &continue_exec);
