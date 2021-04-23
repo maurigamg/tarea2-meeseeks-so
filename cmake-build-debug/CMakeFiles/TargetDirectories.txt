@@ -1,3 +1,0 @@
-/home/maci/Documents/SO/tarea2-meeseeks-so/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/maci/Documents/SO/tarea2-meeseeks-so/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/maci/Documents/SO/tarea2-meeseeks-so/cmake-build-debug/CMakeFiles/tarea2_meeseeks_so.dir
