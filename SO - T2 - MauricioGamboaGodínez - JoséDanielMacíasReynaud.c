@@ -248,10 +248,23 @@ void demo_evaluate()
 
 //End of arithmetic operator
 
+int increment(float probability)
+{
+	int simulation = rand() % 100;
+
+	if (probability >= simulation)
+	{
+		return 0;
+	}
+
+	int difference = simulation - probability;
+	return difference;
+}
+
 int decide_child_amount(float prob)
 {
 
-	int amount = 0;
+	int amount = 1;
 	if (prob >= 0.0 && prob <= 45.0)
 	{
 		amount = 3 + rand() % 5;
@@ -264,6 +277,7 @@ int decide_child_amount(float prob)
 	{
 		amount = 1;
 	}
+
 	return amount;
 }
 
@@ -294,7 +308,7 @@ char *send_to_box(char *request, char request_type, float probability, int level
 		return "Soy un logico";
 		break;
 	case 'P':;
-		glob_var = mmap(NULL, sizeof *glob_var, PROT_READ | PROT_WRITE,
+		/*glob_var = mmap(NULL, sizeof *glob_var, PROT_READ | PROT_WRITE,
 						MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
 		bin_sem = mmap(NULL, sizeof(bin_sem),
@@ -302,11 +316,27 @@ char *send_to_box(char *request, char request_type, float probability, int level
 					   -1, 0);
 
 		sem_init(bin_sem, 1, 1);
-
-		*glob_var = 0;
+*/
+		//*glob_var = 0;
 
 		pid_t meeseeks;
+
+		int resulttest = increment(probability);
+		if (resulttest == 0 && level != 1)
+		{
+			printf("\nGoodbye!%d, PID: \n", getpid());
+
+			exit(EXIT_SUCCESS);
+		}
+		int ref = 100 - resulttest;
+		float finalresult = ref / 10.0f;
+
+		probability += finalresult;
+
 		int children_to_create = decide_child_amount(probability);
+		printf("\n PROBABILIDAD: %f\n", probability);
+		printf("\n QUIERO ESTA CANTIDAD DE HIJOS: %d\n", children_to_create);
+		int var = level;
 		for (int i = 0; i < children_to_create; i++)
 		{
 
@@ -317,63 +347,76 @@ char *send_to_box(char *request, char request_type, float probability, int level
 			}
 			else if (meeseeks == 0)
 			{
-
+				var = level + 1;
 				break;
+			}
+			else
+			{
+				//printf("Hi I'm Mr Meeseeks! I'm waiting for my children to finish (pid: %d, ppid: %d, N:%d)\n", getpid(), getppid(), level);
+
+				waitpid(meeseeks, NULL, 0);
+				//wait(NULL);
+				//printf("Hi I'm Mr Meeseeks! My children finished(pid: %d, ppid: %d, N:%d)\n", getpid(), getppid(), level);
 			}
 		}
 
-		if (meeseeks < 0)
+		if (meeseeks == 0)
 		{
-			fprintf(stderr, "Mr.Meeseeks birth failed!");
-			exit(EXIT_FAILURE);
-		}
-		else if (meeseeks == 0)
-		{
-			int valor;
+			int valor = 0;
 			// proceso hijo
-			sem_wait(bin_sem);
-			int a = *glob_var;
-			a += 1;
-			a -= 1;
-			a += 1;
-			*glob_var = a;
-			a = *glob_var;
-			a -= 1;
-			a += 1;
-			a -= 1;
-			*glob_var = a;
-			a = *glob_var;
-			a += 1;
-			a -= 1;
-			a += 1;
-			*glob_var = a;
-			sleep(2);
-			sem_getvalue(bin_sem, &valor);
-			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N(no hecho):%d, i:%d)\n", getpid(), getppid(), *glob_var, valor);
-			sem_post(bin_sem);
-			sem_getvalue(bin_sem, &valor);
-			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N(no hecho):%d, i:%d)\n", getpid(), getppid(), *glob_var, valor);
+			//sem_wait(bin_sem);
+			//int a = *glob_var;
+			//a += 1;
+			//a -= 1;
+			//a += 1;
+			//*glob_var = a;
+			//a = *glob_var;
+			//a -= 1;
+			//a += 1;
+			//a -= 1;
+			//*glob_var = a;
+			//a = *glob_var;
+			//a += 1;
+			//a -= 1;
+			// return difference;
+			// a += 1;
+			//*glob_var = a;
+			//sleep(1);
+			//sem_getvalue(bin_sem, &valor);
+			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N:%d, i:%d)\n", getpid(), getppid(), level, valor);
+			send_to_box(request, request_type, probability, var);
+
+			//sem_post(bin_sem);
+			//sem_getvalue(bin_sem, &valor);
+			//printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N(:%d, i:%d)\n", getpid(), getppid(), level, valor);
 			//Lentamente crece la facilidad hasta llegar a 100, cuando llega a 100, ya no hay hijos
 
-			send_to_box(request, request_type, probability + 10, level + 1);
 			//int status = system(request);
 			//kill(getpid(), SIGKILL);
-			exit(EXIT_SUCCESS);
 		}
 		else
 		{
 			// proceso padre
 
 			//wait(NULL);
-			wait(NULL); //CAMBIAR POR WAITPID
-			sleep(1);
-			printf("Proceso Padre: pid:%d, ppid:%d, glob_var:%d \n", getpid(), getppid(), *glob_var);
+			//waitpid(meeseeks, NULL, 0);
+
+			//CAMBIAR POR WAITPID
+			//sleep(1);
+			printf("Proceso Padre: pid:%d, ppid:%d \n", getpid(), getppid());
 			printf("Hijo completado\n");
-			sem_destroy(bin_sem);
-			munmap(bin_sem, sizeof(bin_sem));
-			munmap(glob_var, sizeof *glob_var);
+			//sem_destroy(bin_sem);
+			//munmap(bin_sem, sizeof(bin_sem));
+			//munmap(glob_var, sizeof *glob_var);
+			//exit(EXIT_SUCCESS);
 		}
 
+		if (var != 1)
+		{
+			printf("\nVAR!%d\n", var);
+			exit(EXIT_SUCCESS);
+		}
+		printf("soy otra cosa");
 		return "Soy un P";
 
 		break;
@@ -384,6 +427,7 @@ char *send_to_box(char *request, char request_type, float probability, int level
 
 int main(int argc, char **argv)
 {
+	srand(time(NULL) ^ getpid());
 	char *request;
 	char continue_exec;
 	char request_type;
@@ -406,8 +450,8 @@ int main(int argc, char **argv)
 		float prob_input;
 		scanf("%f", &prob_input);
 
-		printf("%f es el numero", prob_input);
-
+		//printf("%f es el numero", prob_input);
+		//send_to_box(request, request_type, prob_input, 1);
 		printf("\nReporte\n%s\n", send_to_box(request, request_type, prob_input, 1));
 
 		tareas += 1;
