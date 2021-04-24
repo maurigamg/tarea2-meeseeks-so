@@ -338,7 +338,7 @@ int execute_program_request()
 {
 }
 
-char *send_to_box(char *request, char request_type, float probability, int level)
+char *send_to_box(char *request, char request_type, float probability, int level, int iteration)
 {
 
 	switch (request_type)
@@ -382,6 +382,7 @@ char *send_to_box(char *request, char request_type, float probability, int level
 		printf("\n PROBABILIDAD: %f\n", probability);
 		printf("\n QUIERO ESTA CANTIDAD DE HIJOS: %d\n", children_to_create);
 		int var = level;
+		int iteration = 1;
 		for (int i = 0; i < children_to_create; i++)
 		{
 
@@ -393,6 +394,7 @@ char *send_to_box(char *request, char request_type, float probability, int level
 			else if (meeseeks == 0)
 			{
 				var = level + 1;
+				iteration = i;
 				break;
 			}
 			else
@@ -428,10 +430,10 @@ char *send_to_box(char *request, char request_type, float probability, int level
 			//*glob_var = a;
 			//sleep(1);
 			//sem_getvalue(bin_sem, &valor);
-			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N:%d, i:%d)\n", getpid(), getppid(), level, valor);
+			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N:%d, i:%d)\n", getpid(), getppid(), level, iteration);
 			msleep(sleep_random(probability));
 
-			send_to_box(request, request_type, probability, var);
+			send_to_box(request, request_type, probability, var, iteration);
 
 			//sem_post(bin_sem);
 			//sem_getvalue(bin_sem, &valor);
@@ -499,7 +501,7 @@ int main(int argc, char **argv)
 
 		//printf("%f es el numero", prob_input);
 		//send_to_box(request, request_type, prob_input, 1);
-		printf("\nReporte\n%s\n", send_to_box(request, request_type, prob_input, 1));
+		printf("\nReporte\n%s\n", send_to_box(request, request_type, prob_input, 1, 0));
 
 		tareas += 1;
 		printf("\nDesea realizar otra solicitud? (S/N): ");
