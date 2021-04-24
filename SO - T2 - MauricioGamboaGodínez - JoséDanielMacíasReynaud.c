@@ -32,6 +32,8 @@ https://stackoverflow.com/questions/21129845/why-does-sem-open-work-with-fork-wi
 #include <pthread.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
+#include <errno.h>
 
 //Meesesks's variables
 static int *glob_var;
@@ -40,6 +42,29 @@ sem_t *bin_sem;
 //char stack
 char stack[25];
 int top = -1;
+
+/* msleep(): Sleep for the requested number of milliseconds. */
+int msleep(long tms) //https://qnaplus.com/c-program-to-sleep-in-milliseconds/
+{
+	struct timespec ts;
+	int ret;
+
+	if (tms < 0)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+
+	ts.tv_sec = tms / 1000;
+	ts.tv_nsec = (tms % 1000) * 1000000;
+
+	do
+	{
+		ret = nanosleep(&ts, &ts);
+	} while (ret && errno == EINTR);
+
+	return ret;
+}
 
 //Start of arithmetic operator
 int ipow(int base, int exp)
@@ -261,17 +286,37 @@ int increment(float probability)
 	return difference;
 }
 
+//Generates the time in milliseconds of simulated execution time
+int sleep_random(float prob)
+{
+	int miliseconds = 500;
+	if (prob >= 0.0 && prob <= 45.0)
+	{
+		miliseconds = (rand() % (1500 - 500 + 1)) + 500;
+	}
+	else if (prob <= 85.0)
+	{
+		miliseconds = (rand() % (3000 - 1500 + 1)) + 1500;
+	}
+	else if (prob <= 100.0)
+	{
+		miliseconds = (rand() % (5000 - 3000 + 1)) + 3000;
+	}
+	return miliseconds;
+}
+
+//Generates the amount of children needed to solve the problem
 int decide_child_amount(float prob)
 {
 
 	int amount = 1;
 	if (prob >= 0.0 && prob <= 45.0)
 	{
-		amount = 3 + rand() % 5;
+		amount = (rand() % (5 - 3 + 1)) + 3;
 	}
 	else if (prob <= 85.0)
 	{
-		amount = 1 + rand() % 3;
+		amount = (rand() % (3 - 1 + 1)) + 1;
 	}
 	else if (prob <= 100.0)
 	{
@@ -384,6 +429,8 @@ char *send_to_box(char *request, char request_type, float probability, int level
 			//sleep(1);
 			//sem_getvalue(bin_sem, &valor);
 			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N:%d, i:%d)\n", getpid(), getppid(), level, valor);
+			msleep(sleep_random(probability));
+
 			send_to_box(request, request_type, probability, var);
 
 			//sem_post(bin_sem);
