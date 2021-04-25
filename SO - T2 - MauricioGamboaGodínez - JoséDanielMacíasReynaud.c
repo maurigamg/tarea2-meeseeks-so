@@ -38,10 +38,15 @@ https://stackoverflow.com/questions/21129845/why-does-sem-open-work-with-fork-wi
 //Meesesks's variables
 static int *glob_var;
 sem_t *bin_sem;
+static int *iterations;
 
 //char stack
 char stack[25];
 int top = -1;
+
+int time_to_go = 0;
+int time_is_over = 0;
+clock_t initial_time;
 
 /* msleep(): Sleep for the requested number of milliseconds. */
 int msleep(long tms) //https://qnaplus.com/c-program-to-sleep-in-milliseconds/
@@ -275,6 +280,11 @@ void demo_evaluate()
 
 int increment(float probability)
 {
+	if (probability == 0)
+	{
+		return 0;
+	}
+
 	int simulation = rand() % 100;
 
 	if (probability >= simulation)
@@ -284,6 +294,12 @@ int increment(float probability)
 
 	int difference = simulation - probability;
 	return difference;
+}
+
+void set_global_timer_minutes(float minutes)
+{
+	int ms = minutes * 60 * 1000;
+	time_to_go = ms;
 }
 
 //Generates the time in milliseconds of simulated execution time
@@ -334,11 +350,19 @@ pid_t create_meeseeks()
 	return pid;
 }
 
-int execute_program_request()
+void *delay(void *arg)
 {
+	int *iptr = (int *)malloc(sizeof(int));
+
+	msleep(time_to_go);
+	*iptr = 1;
+	int a = 1;
+	int *maci = &a;
+	glob_var = iptr;
+	printf("\n\nNANANNNANANANANANffANNANANNAANNANANNANANANANNANANANAANNANANANANANANANANNANANANANANNANNA\n\n");
 }
 
-char *send_to_box(char *request, char request_type, float probability, int level, int iteration)
+char *send_to_box(char *request, char request_type, float probability, int level)
 {
 
 	switch (request_type)
@@ -353,7 +377,7 @@ char *send_to_box(char *request, char request_type, float probability, int level
 		return "Soy un logico";
 		break;
 	case 'P':;
-		/*glob_var = mmap(NULL, sizeof *glob_var, PROT_READ | PROT_WRITE,
+		glob_var = mmap(NULL, sizeof *glob_var, PROT_READ | PROT_WRITE,
 						MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
 		bin_sem = mmap(NULL, sizeof(bin_sem),
@@ -361,7 +385,7 @@ char *send_to_box(char *request, char request_type, float probability, int level
 					   -1, 0);
 
 		sem_init(bin_sem, 1, 1);
-*/
+
 		//*glob_var = 0;
 
 		pid_t meeseeks;
@@ -380,13 +404,13 @@ char *send_to_box(char *request, char request_type, float probability, int level
 
 		int children_to_create = decide_child_amount(probability);
 		printf("\n PROBABILIDAD: %f\n", probability);
-		printf("\n QUIERO ESTA CANTIDAD DE HIJOS: %d\n", children_to_create);
 		int var = level;
-		int iteration = 1;
+
 		for (int i = 0; i < children_to_create; i++)
 		{
 
 			meeseeks = create_meeseeks();
+
 			if (meeseeks < 0)
 			{
 				exit(EXIT_FAILURE);
@@ -394,7 +418,9 @@ char *send_to_box(char *request, char request_type, float probability, int level
 			else if (meeseeks == 0)
 			{
 				var = level + 1;
-				iteration = i;
+				iterations[level] = iterations[level] + 1;
+				printf("Soy nivel %d, en el campo: %d.\n", level, iterations[level]);
+
 				break;
 			}
 			else
@@ -430,10 +456,23 @@ char *send_to_box(char *request, char request_type, float probability, int level
 			//*glob_var = a;
 			//sleep(1);
 			//sem_getvalue(bin_sem, &valor);
-			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N:%d, i:%d)\n", getpid(), getppid(), level, iteration);
-			msleep(sleep_random(probability));
+			printf("Hi I'm Mr Meeseeks! Look at Meeeee. (pid: %d, ppid: %d, N:%d, i:%d)\n", getpid(), getppid(), level, iterations[level]);
 
-			send_to_box(request, request_type, probability, var, iteration);
+			int ms_to_sleep = sleep_random(probability);
+
+			printf("CHILD IS OVER : %d", *glob_var);
+
+			if (*glob_var == 1)
+			{
+				printf("I'm dying! PID: %d", getpid());
+				kill(getpid(), SIGKILL);
+			}
+			else
+			{
+				msleep(ms_to_sleep);
+			}
+
+			send_to_box(request, request_type, probability, var);
 
 			//sem_post(bin_sem);
 			//sem_getvalue(bin_sem, &valor);
@@ -462,10 +501,9 @@ char *send_to_box(char *request, char request_type, float probability, int level
 
 		if (var != 1)
 		{
-			printf("\nVAR!%d\n", var);
+			//printf("\nVAR!%d\n", var);
 			exit(EXIT_SUCCESS);
 		}
-		printf("soy otra cosa");
 		return "Soy un P";
 
 		break;
@@ -481,6 +519,13 @@ int main(int argc, char **argv)
 	char continue_exec;
 	char request_type;
 	int tareas = 0;
+
+	iterations = mmap(NULL, 25 * sizeof(int),
+					  PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED,
+					  -1, 0);
+
+	glob_var = mmap(NULL, sizeof *glob_var, PROT_READ | PROT_WRITE,
+					MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
 	while (1)
 	{
@@ -499,9 +544,28 @@ int main(int argc, char **argv)
 		float prob_input;
 		scanf("%f", &prob_input);
 
+		printf("\nIngrese los minutos máximos: ");
+		float minutos;
+		scanf("%f", &minutos);
+		set_global_timer_minutes(minutos);
+		initial_time = clock();
+		printf("Milisegundo: %d", time_to_go);
+
+		pthread_t timer_thread_id;
+		printf("Before Thread\n");
+		pthread_create(&timer_thread_id, NULL, delay, NULL);
+
+		//pthread_join(timer_thread_id, NULL);
+		printf("After Thread\n");
+
 		//printf("%f es el numero", prob_input);
 		//send_to_box(request, request_type, prob_input, 1);
-		printf("\nReporte\n%s\n", send_to_box(request, request_type, prob_input, 1, 0));
+		printf("\nReporte\n%s\n", send_to_box(request, request_type, prob_input, 1));
+		int *returnedVal;
+
+		int a = *glob_var;
+		a = 1;
+		*glob_var = a;
 
 		tareas += 1;
 		printf("\nDesea realizar otra solicitud? (S/N): ");
@@ -513,5 +577,7 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
+
+	munmap(iterations, sizeof *iterations);
 	return 0;
 }
