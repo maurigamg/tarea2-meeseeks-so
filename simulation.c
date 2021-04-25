@@ -1,10 +1,15 @@
-#include <unistd.h>
-#include <stdlib.h>
+#include <signal.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <semaphore.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/mman.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <string.h>
+#include <ctype.h>
+#include <fcntl.h> 
 
 /*
     Global variable to know if a process resolved the request,
@@ -13,6 +18,8 @@
     */
 static int *isDone;
 static int *count;
+
+sem_t *bin_sem;
 
 pid_t create_meeseeks()
 {
@@ -28,7 +35,6 @@ void send_to_box_secundary(int children, int parent_to_child_old[], int child_to
     pid_t meeseeks;
 
     int data_parent, data_child;
-
     *count += 1;
 
     int parent_to_child[2]; //Communication parent to child
@@ -43,12 +49,14 @@ void send_to_box_secundary(int children, int parent_to_child_old[], int child_to
     printf("Read %d bytes: %s pid: %d ppid: %d \n", data_parent, buffer_request, getpid(), getppid());
     printf("%d\n", *count);
 
-    if (*count == 2)
+    if (*count == 3)
     {
         *isDone = 1;
         char *solution = "LISTOdddddddddddddddd";
+        sem_wait(bin_sem);
         close(parent_to_child_old[0]); //Closed parent's reading
         data_child = write(child_to_parent_old[1], solution, strlen(solution));
+        sem_post(bin_sem);
         //printf("Wrote %d bytes pid %d\n", data_child, getpid());
         printf("Termine data: %d , pid: %d\n", data_child, getpid());
         printf("Goodbye, pid: %d,ppid: %d\n", getpid(), getppid());
@@ -60,6 +68,10 @@ void send_to_box_secundary(int children, int parent_to_child_old[], int child_to
     {
         exit(EXIT_FAILURE);
     }
+
+    fcntl(child_to_parent[0], F_SETFL, O_NONBLOCK);
+    fcntl(parent_to_child[0], F_SETFL, O_NONBLOCK);
+    
     for (int i = 0; i < children; i++)
     {
         if (*isDone == 1)
@@ -87,7 +99,6 @@ void send_to_box_secundary(int children, int parent_to_child_old[], int child_to
     }
     close(parent_to_child[0]); //Close unused parent's reading
     close(child_to_parent[1]); //Close unused child's writing
-
     while (1) //waiting for the completation message
     {
         data_parent = read(parent_to_child_old[0], buffer_request, 5);
@@ -170,6 +181,8 @@ char *send_to_box_primary(int children, char *request)
         pipes_parent_to_child[child][1] = parent_to_child[1];
         pipes_child_to_parent[child][0] = child_to_parent[0];
         pipes_child_to_parent[child][1] = child_to_parent[1];
+        fcntl(child_to_parent[0], F_SETFL, O_NONBLOCK);
+        fcntl(parent_to_child[0], F_SETFL, O_NONBLOCK);
 
         meeseeks = create_meeseeks();
 
@@ -202,6 +215,7 @@ char *send_to_box_primary(int children, char *request)
     {
         for (int child = 0; child < children; child++)
         {
+            
             data_child = read(pipes_child_to_parent[child][0], buffer_solution, BUFSIZ);
             printf("Read %d bytes: %s PID %d\n", data_child, buffer_solution, getpid());
             if (data_child > 0) //ANSWER??
@@ -253,11 +267,19 @@ int main()
     count = mmap(NULL, sizeof *count, PROT_READ | PROT_WRITE,
                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
+    bin_sem = mmap(NULL, sizeof(bin_sem),
+					   PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS,
+					   -1, 0);
+
+	sem_init(bin_sem, 1, 1);
+
     //Request
     char *solution = send_to_box_primary(4, "Hola");
     printf("Solution: %s, isDone: %d, count: %d\n", solution, *isDone, *count);
 
     //Remove shared memory
+    sem_destroy(bin_sem);
+	munmap(bin_sem, sizeof(bin_sem));
     munmap(isDone, sizeof *isDone);
     munmap(count, sizeof *count);
     exit(EXIT_SUCCESS);
