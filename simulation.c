@@ -70,7 +70,7 @@ void send_to_box_secundary(int children, int parent_to_child_old[], int child_to
     }
 
     fcntl(child_to_parent[0], F_SETFL, O_NONBLOCK);
-    fcntl(parent_to_child[0], F_SETFL, O_NONBLOCK);
+    fcntl(child_to_parent[0], F_SETFL, O_NONBLOCK);
     
     for (int i = 0; i < children; i++)
     {
