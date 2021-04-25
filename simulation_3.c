@@ -36,7 +36,7 @@ void waitMeeseeks(pid_t pids[], int children)
 }
 
 //
-void send_to_box_simulation_aux(int children, int parent_to_child_request_old[], int parent_to_child_message_old[], int child_to_parent_solution_old[],size_t size)
+void send_to_box_simulation_aux(int children, int parent_to_child_request_old[], int parent_to_child_message_old[], int child_to_parent_solution_old[])
 {
     printf("Hi I'm Mr.Meeseeks, pid: %d,ppid: %d\n", getpid(), getppid());
     sem_wait(bin_sem);
@@ -79,7 +79,7 @@ void send_to_box_simulation_aux(int children, int parent_to_child_request_old[],
     char buffer_request[BUFSIZ + 1];  //It'll contain the request from the parent
     char buffer_solution[BUFSIZ + 1]; //It'll contain the solution if a process completes the request.
 
-    data_parent = read(parent_to_child_request_old[0], buffer_request, size); //Read request from parent
+    data_parent = read(parent_to_child_request_old[0], buffer_request, BUFSIZ); //Read request from parent
 
     close(parent_to_child_request_old[0]); //Closed parent's reading
     printf("Read %d bytes: %s pid: %d ppid: %d \n", data_parent, buffer_request, getpid(), getppid());
@@ -124,7 +124,7 @@ void send_to_box_simulation_aux(int children, int parent_to_child_request_old[],
         }
         else if (meeseeks == 0)
         {
-            send_to_box_simulation_aux(children, pipes_parent_to_child_request[child], pipes_parent_to_child_message[child], pipes_child_to_parent_solution[child], strlen(request));
+            send_to_box_simulation_aux(children, pipes_parent_to_child_request[child], pipes_parent_to_child_message[child], pipes_child_to_parent_solution[child]);
         }
         else
         {
@@ -261,7 +261,7 @@ char *send_to_box_simulation(int children, char *request)
         }
         else if (meeseeks == 0)
         {
-            send_to_box_simulation_aux(children, pipes_parent_to_child_request[child], pipes_parent_to_child_message[child], pipes_child_to_parent_solution[child], strlen(request));
+            send_to_box_simulation_aux(children, pipes_parent_to_child_request[child], pipes_parent_to_child_message[child], pipes_child_to_parent_solution[child]);
         }
         else
         {
